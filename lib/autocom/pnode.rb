@@ -5,10 +5,16 @@ class PNode
   attr_reader :unique_id
   attr_accessor :parent_edge
 
-  @@next_unique_id = 100
+  @@start_unique_id = 100
+  @@next_unique_id = @@start_unique_id
 
   def self.reset_node_ids(id = 100)
+    @@start_unique_id = id
     @@next_unique_id = id
+  end
+
+  def self.total_nodes_generated
+    @@next_unique_id - @@start_unique_id
   end
 
   def initialize

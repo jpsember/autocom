@@ -6,14 +6,6 @@ req 'match corpus ngrams autocomplete prediction_tree', 'autocom'
 
 class AutoComApp
 
-  def log_prob(freq,total)
-    r = Math.log10(freq / total.to_f)
-    puts("log_prob #{freq} / #{total} = #{r}")
-    r
-  end
-
-  def initialize
-  end
 
   def run(argv=ARGV)
 
@@ -23,8 +15,10 @@ Performs autocompletion using most likely unigrams and bigrams taken from a corp
 
 EOS
       opt :corpus,"corpus",:type => :string
+      opt :window,"window size",:type => :integer
       opt :unigram,"unigram log probability",:type => :float
       opt :bigram,"bigram log probability",:type => :float
+      opt :verbose,"verbose"
     end
 
     options = Trollop::with_standard_exception_handling p do
@@ -36,7 +30,7 @@ EOS
 
     msg =<<-EOS
 
-Performs autocompletion using most likely unigrams and bigrams taken from a corpus.
+Performs autocompletion based on a corpus.
 
 Type a sentence; you can also use these special keys:
 
@@ -50,12 +44,13 @@ EOS
     corpus_text = FileUtils.read_text_file(corpus_path)
     corpus_text = apply_frequency_filter(corpus_text)
 
-
-    corpus = Corpus.new(corpus_text)
-    ac = PredictionTree.new(corpus)
-    puts ac
-
-    # ac = AutoComplete.new(corpus_text,8,options[:unigram],options[:bigram])
+    if options[:window]
+      corpus = Corpus.new(corpus_text)
+      ac = PredictionTree.new(corpus,options[:window])
+      puts "Prediction Tree:\n-------------------------------------\n#{ac}" if options[:verbose]
+    else
+      ac = AutoComplete.new(corpus_text,8,options[:unigram],options[:bigram])
+    end
 
     quit_flag = false
 
@@ -70,7 +65,6 @@ EOS
       puts " ==> #{text}|"
 
       cmd = RubyBase.get_user_char('q')
-      # puts "got command #{cmd.ord}"
 
       case cmd
       when 'q'
@@ -89,7 +83,6 @@ EOS
           text[-match.prefix.length..-1] = match.text + ' '
         end
       else
-        # puts "ord=#{cmd.ord}"
         text << cmd
       end
     end

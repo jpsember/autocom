@@ -7,8 +7,8 @@ class PredictionTree
 
   attr_reader :max_result_items
 
-  def initialize(corpus)
-    @max_result_items = 5
+  def initialize(corpus,window_size=5)
+    @window_size = window_size
     word_freq_map = build_word_frequency_map(corpus)
     build_prediction_tree(word_freq_map)
   end
@@ -18,17 +18,17 @@ class PredictionTree
 
     # Set up some temporary instance variables to use during this operation
     @match_text = text
+    @match_stub = nil
     @matches = []
 
     while true
-      prefix = calc_prefix(text)
-      break if !prefix
-      @match_prefix = prefix
+      @match_stub = calculate_stub(text)
+      break if !@match_stub
 
-      node_cursor = find_start_node(prefix)
+      node_cursor = find_start_node
       break if !node_cursor
 
-      match_aux(node_cursor.node,node_cursor.depth,node_cursor.character_offset,@match_prefix)
+      match_aux(node_cursor.node,node_cursor.depth,node_cursor.character_offset,@match_stub)
       break
     end
 
@@ -37,6 +37,7 @@ class PredictionTree
     # Clear the temporary instance variables
     @matches = nil
     @match_text = nil
+    @match_stub = nil
 
     # Sort by frequency
     matches.sort!{|a,b| b[1] <=> a[1]}
@@ -58,7 +59,7 @@ class PredictionTree
   def match_aux(node,filter_value,character_offset,text_accum)
     if node.is_leaf?
       # Omit the $ we added along the last edge
-      match = Match.new(@match_text,@match_prefix,text_accum[0...-1])
+      match = Match.new(@match_text,@match_stub,text_accum[0...-1])
       @matches << [match,node.word_frequency]
     else
       node.edge_list.each do |edge|
@@ -84,39 +85,44 @@ class PredictionTree
       @depth = depth
       @character_offset = character_offset
     end
-    def to_s
-      "NodeCursor[ node=#{@node} depth=#{@depth} ch.offset=#{@character_offset} ]"
-    end
   end
 
-  def find_start_node(prefix,node=@root_node,depth=0)
-    if depth==prefix.length
-      return NodeCursor.new(node,depth,0)
-    end
+  def find_start_node
+    node = @root_node
+    depth = 0
+    ret = nil
+    while true
+      # Get the portion of the stub we haven't matched yet
+      unmatched_stub = @match_stub[depth..-1]
 
-    suffix = prefix[depth..-1]
-    # Find an edge whose label is a prefix for the suffix
-    active_edge = nil
-    active_prefix_size = nil
-    node.edge_list.each do |edge|
-      label = edge.label
-      label_prefix_size = [prefix.length-depth,label.length].min
-      label_prefix = label[0...label_prefix_size]
-      if suffix.start_with?(label_prefix)
-        active_edge = edge
-        active_prefix_size = label_prefix_size
+      if unmatched_stub.length == 0
+        ret = NodeCursor.new(node,depth,0)
         break
       end
-    end
-    return nil if !active_edge
 
-    unimp "clean this up later"
-    depth_adjustment = active_prefix_size
-    if active_prefix_size < active_edge.label.length
-      return NodeCursor.new(node,depth+depth_adjustment,depth_adjustment)
-    end
+      # Find the (at most one) edge whose label is a prefix for the unmatched stub portion
+      active_edge = nil
+      active_prefix_size = nil
+      node.edge_list.each do |edge|
+        label = edge.label
+        label_prefix_size = [unmatched_stub.length,label.length].min
+        label_prefix = label[0...label_prefix_size]
+        if unmatched_stub.start_with?(label_prefix)
+          active_edge = edge
+          active_prefix_size = label_prefix_size
+          break
+        end
+      end
+      break if !active_edge
 
-    return find_start_node(prefix,active_edge.destination_node,depth+depth_adjustment)
+      depth += active_prefix_size
+      if active_prefix_size < active_edge.label.length
+        ret = NodeCursor.new(node,depth,active_prefix_size)
+        break
+      end
+      node = active_edge.destination_node
+    end
+    ret
   end
 
   def to_s_aux(node,s,indent,accum)
@@ -129,22 +135,16 @@ class PredictionTree
       s << ' '*(2+indent) << edge.to_s(false) << "\n"
       to_s_aux(edge.destination_node,s,indent+4,accum+edge.label)
     end
-
   end
 
   def build_prediction_tree(word_frequency_map)
     PNode.reset_node_ids
-
     @root_node = PNode.new
     word_frequency_map.each_pair do |word,frequency|
       insert_word_into_tree(@root_node,word+'$',frequency)
     end
-
-    # It would be nice if the edge filters could be done as the tree was being constructed;
-    # but then again, we can't expect to compress the tree simultaneously, so keep it simple
-    install_edge_filters(@root_node,0)
-
-    compress_tree(@root_node)
+    install_edge_filters
+    compress_tree
   end
 
 
@@ -164,7 +164,7 @@ class PredictionTree
   #
   # Return nil if no valid prefix found.
   #
-  def calc_prefix(text)
+  def calculate_stub(text)
     cursor = text.length
 
     prefix = nil
@@ -192,7 +192,13 @@ class PredictionTree
     end
   end
 
-  def compress_tree(node)
+  def compress_tree
+    @nodes_removed = 0
+    compress_tree_aux(@root_node)
+    puts "#{@nodes_removed} nodes of #{PNode.total_nodes_generated} removed due to compression"
+  end
+
+  def compress_tree_aux(node)
     node.edge_list.each do |edge_a|
       while true
         node_b = edge_a.destination_node
@@ -203,32 +209,37 @@ class PredictionTree
         edge_a.label = edge_a.label + edge_b.label
         edge_a.destination_node = node_c
         node_c.parent_edge = edge_a
+        @nodes_removed+=1
       end
-      compress_tree(node_b)
+      compress_tree_aux(node_b)
     end
   end
 
-  def install_edge_filters(node,node_depth)
+  def install_edge_filters
+    install_edge_filters_aux(@root_node,0)
+  end
+
+  def install_edge_filters_aux(node,node_depth)
     leaf_nodes = []
     if node.is_leaf?
       leaf_nodes << node
     else
       node.edge_list.each do |child_edge|
         child_node = child_edge.destination_node
-        leaf_nodes.concat(install_edge_filters(child_node,node_depth+1))
+        leaf_nodes.concat(install_edge_filters_aux(child_node,node_depth+1))
       end
 
       # Sort leaf nodes by highest frequency first
       leaf_nodes.sort!{|a,b| b.word_frequency <=> a.word_frequency}
-      while leaf_nodes.length > @max_result_items
+      while leaf_nodes.length > @window_size
         leaf_node = leaf_nodes.pop
-        filter_word(leaf_node.parent_edge,node_depth+1)
+        add_filter_to_edge(leaf_node.parent_edge,node_depth+1)
       end
     end
     leaf_nodes
   end
 
-  def filter_word(edge,filter_depth)
+  def add_filter_to_edge(edge,filter_depth)
     while edge
       break if edge.filter_value >= filter_depth
       edge.filter_value = filter_depth
