@@ -51,4 +51,8 @@ class PNode
     to_s
   end
 
+  def is_leaf?
+    @edge_list.empty?
+  end
+
 end

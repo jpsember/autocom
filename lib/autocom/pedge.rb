@@ -7,9 +7,13 @@ class PEdge
     @filter_value = 0
   end
 
-  def to_s
-    #" --'#{label}'-> "
-    "#{@source_node.unique_id} --'#{label}'--> #{@destination_node.unique_id} (f #{filter_value})"
+  def to_s(with_node_ids = true)
+    s = ''
+    s << "#{@source_node.unique_id} " if with_node_ids
+    s << "--#{label}-->"
+    s << " #{@destination_node.unique_id}" if with_node_ids
+    s << " f#{@filter_value}" if @filter_value != 0
+    s
   end
 
   def inspect
