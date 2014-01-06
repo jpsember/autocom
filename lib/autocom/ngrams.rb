@@ -1,28 +1,5 @@
 #!/usr/bin/env ruby
 
-class Array
-
-  def bsearch_index
-    found = nil
-    min = 0
-    max = self.size
-    while min < max
-      mid = (min+max)/2
-      result = yield(at(mid))
-      # puts " min #{min} max #{max} mid #{mid} elem=#{at(mid)} result #{result}"
-      if !result
-        min = mid + 1
-      else
-        if !found || found > mid
-          found = mid
-        end
-        max = mid
-      end
-    end
-    found
-  end
-end
-
 
 class Ngrams
 
@@ -53,7 +30,6 @@ class Ngrams
       min_freq = calc_min_freq(min_log_prob)
 
       cursor = @ngram_array.bsearch_index{|ngram,freq| ngram >= prefix}
-      break if !cursor
 
       while cursor < @ngram_array.size
         ngram,freq = @ngram_array[cursor]
@@ -69,7 +45,6 @@ class Ngrams
 
         # Insert into position based on frequency
         insert_posn = matches.bsearch_index{|ng,fr| freq >= fr}
-        insert_posn = matches.length if !insert_posn
         matches[insert_posn,0] = [[match,freq]]
         matches.pop if matches.size > max_results
       end

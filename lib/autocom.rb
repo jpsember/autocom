@@ -2,7 +2,7 @@
 
 require 'js_base'
 
-req 'match corpus ngrams autocomplete', 'autocom'
+req 'match corpus ngrams autocomplete prediction_tree', 'autocom'
 
 class AutoComApp
 
@@ -47,11 +47,17 @@ Type a sentence; you can also use these special keys:
 EOS
     puts msg
 
-    # puts "Reading corpus;"
-    corpus = FileUtils.read_text_file(corpus_path)
-    # puts "Constructing unigram and bigram models;"
-    ac = AutoComplete.new(corpus,8,options[:unigram],options[:bigram])
-    # puts
+    corpus_text = FileUtils.read_text_file(corpus_path)
+
+
+    if true
+      corpus = Corpus.new(corpus_text)
+      ac = PredictionTree.new(corpus)
+      puts ac
+      return
+    end
+
+    ac = AutoComplete.new(corpus_text,8,options[:unigram],options[:bigram])
 
     quit_flag = false
 
