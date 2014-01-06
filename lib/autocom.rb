@@ -42,7 +42,7 @@ EOS
     puts msg
 
     corpus_text = FileUtils.read_text_file(corpus_path)
-    corpus_text = apply_frequency_filter(corpus_text)
+    corpus_text = Corpus.process_frequency_tags(corpus_text)
 
     if options[:window]
       corpus = Corpus.new(corpus_text)
@@ -88,23 +88,6 @@ EOS
     end
   end
 
-  def apply_frequency_filter(txt)
-    ends_with_freq = Regexp.new(".*\\.(\\d+)$")
-    txt2 = ''
-    txt.lines.each do |line|
-      line.chomp!
-      match = ends_with_freq.match(line)
-      if match
-        rep = match[1].to_i
-        skip_digits = match[1].length + 1
-        line = line[0...-skip_digits]
-        line += ' '
-        line *= rep
-      end
-      txt2 << line << "\n"
-    end
-    txt2
-  end
 
 end
 

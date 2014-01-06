@@ -193,9 +193,7 @@ class PredictionTree
   end
 
   def compress_tree
-    @nodes_removed = 0
     compress_tree_aux(@root_node)
-    puts "#{@nodes_removed} nodes of #{PNode.total_nodes_generated} removed due to compression"
   end
 
   def compress_tree_aux(node)
@@ -204,12 +202,10 @@ class PredictionTree
         node_b = edge_a.destination_node
         break if node_b.edge_list.size != 1
         edge_b = node_b.edge_list[0]
-        assert!(edge_a.filter_value == edge_b.filter_value)
         node_c = edge_b.destination_node
         edge_a.label = edge_a.label + edge_b.label
         edge_a.destination_node = node_c
         node_c.parent_edge = edge_a
-        @nodes_removed+=1
       end
       compress_tree_aux(node_b)
     end

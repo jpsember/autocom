@@ -12,6 +12,24 @@ class Corpus
     @sentences = read_corpus(content_string)
   end
 
+  def self.process_frequency_tags(text)
+    ends_with_freq = Regexp.new(".*\\.(\\d+)$")
+    txt2 = ''
+    text.lines.each do |line|
+      line.chomp!
+      match = ends_with_freq.match(line)
+      if match
+        rep = match[1].to_i
+        skip_digits = match[1].length + 1
+        line = line[0...-skip_digits]
+        line += ' '
+        line *= rep
+      end
+      txt2 << line << "\n"
+    end
+    txt2
+  end
+
 
   private
 

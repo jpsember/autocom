@@ -1,0 +1,55 @@
+
+ba
+[bar]
+[bat]
+[bath]
+
+bath
+[bath]
+[bathe]
+
+a
+[and]
+
+z
+
+anz
+
+bae
+
+bath ba
+bath [bar]
+bath [bat]
+bath [bath]
+
+3
+
+ba
+[bar]
+[bat]
+[bath]
+
+an
+[and]
+
+2
+
+ba
+[bar]
+[bat]
+
+10
+
+ba
+[bar]
+[bat]
+[bath]
+[bathe]
+[bats]
+
+a
+[and]
+
+z
+
+

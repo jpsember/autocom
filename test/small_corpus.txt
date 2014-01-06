@@ -1,0 +1,6 @@
+and .9
+bar .7
+bat .5
+bats .2
+bath .4
+bathe .2
