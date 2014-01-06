@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'js_base/Pretty'
+req 'pnode pedge'
 
 class PredictionTree
 
@@ -8,40 +9,43 @@ class PredictionTree
 
   def initialize(corpus)
     word_freq_map = build_word_frequency_map(corpus)
-    @root_node = build_prediction_tree(word_freq_map)
+    build_prediction_tree(word_freq_map)
+  end
+
+
+  def match_aux(node,filter_value,text_accum)
+    if node.word_frequency != 0
+      # Omit the $ we added along the last edge
+      match = Match.new(@match_text,@match_prefix,text_accum[0...-1])
+      @matches << [match,node.word_frequency]
+    else
+      node.edge_list.each do |edge|
+        next if edge.filter_value > filter_value
+        match_aux(edge.destination_node,filter_value,text_accum+edge.label)
+      end
+    end
   end
 
   def match(text)
-    matches = []
+    @match_text = text
+    @matches = []
 
     while true
-
       prefix = calc_prefix(text)
       break if !prefix
+      @match_prefix = prefix
 
-      cursor = @ngram_array.bsearch_index{|ngram,freq| ngram >= prefix}
-      break if cursor == @ngram_array.size
+      node,depth = find_start_node(prefix)
+      break if !node
 
-      while cursor < @ngram_array.size
-        ngram,freq = @ngram_array[cursor]
-        cursor += 1
-
-        break if !ngram.start_with?(prefix)
-        next if freq < min_freq
-
-        match = Match.new(text,prefix,ngram)
-        info = (@n == 1) ? 'Unigram' : 'Bigram'
-        info << " f:#{freq}"
-        match.info = info
-
-        # Insert into position based on frequency
-        insert_posn = matches.bsearch_index{|ng,fr| freq >= fr}
-        matches[insert_posn,0] = [[match,freq]]
-        matches.pop if matches.size > max_results
-      end
+      match_aux(node,depth,@match_prefix)
       break
     end
-    matches.map{|m,f| m}
+
+    # Sort by frequency
+    @matches.sort!{|a,b| b[1] <=> a[1]}
+
+    @matches.map{|m,f| m}
   end
 
   def to_s
@@ -54,122 +58,54 @@ class PredictionTree
   private
 
 
+  def find_start_node(prefix,node=@root_node,depth=0)
+    return [node,depth] if depth==prefix.length
+    suffix = prefix[depth..-1]
+    # Find an edge whose label is a prefix for the suffix
+    active_edge = nil
+    node.edge_list.each do |edge|
+      if suffix.start_with?(edge.label)
+        active_edge = edge
+        break
+      end
+    end
+    return [nil,nil] if !active_edge
+
+    depth_adjustment = active_edge.label.length
+    return find_start_node(prefix,active_edge.destination_node,depth+depth_adjustment)
+  end
+
   def to_s_aux(node,s,indent,accum)
-    s << ' '*indent << "'#{accum}'"
+    s << ' '*indent << "#{node.unique_id}: '#{accum}'"
     if node.word_frequency != 0
       s << " *#{node.word_frequency}"
     end
     s << "\n"
-    node.edge_list.each{|edge| to_s_aux(edge.destination_node,s,indent+1,accum+edge.label)}
+    indent += 1
+    node.edge_list.each do |edge|
+      s << ' '*indent << edge.to_s << "\n"
+      to_s_aux(edge.destination_node,s,indent,accum+edge.label)
+    end
+    indent -= 1
   end
 
-
-  class SNode
-    attr_accessor :word
-    attr_accessor :word_frequency
-
-    def initialize(word,word_frequency)
-      @word = word
-      @word_frequency = word_frequency
-    end
-
-    def to_s
-      "#{@word}(#{@word_frequency}) "
-    end
-
-    def inspect
-      to_s
-    end
-  end
-
-  class PNode
-    attr_accessor :edge_list
-    attr_accessor :word_frequency
-
-    def initialize
-      @edge_list = []
-      @word_frequency = 0
-      # Holds population, if <= n; else, a prediction tree containing the n most frequent elements
-      @population_or_summary = 0
-    end
-
-    def population
-      raise ArgumentError if !(@population_or_summary.is_a? Numeric)
-      @population_or_summary
-    end
-
-    def adjust_population(amount = 1)
-      @population_or_summary += amount
-    end
-
-    def find_child_node(character)
-      index = @edge_list.bsearch_index do |edge|
-        edge.label >= character
-      end
-
-      # puts "find_child_node char='#{character}', returned index #{index} for edge list #{@edge_list}"
-
-      if index == @edge_list.size || @edge_list[index].label != character
-        newedge = PEdge.new
-        newedge.destination_node = PNode.new
-        newedge.label = character
-        @edge_list.insert(index,newedge)
-      end
-      @edge_list[index].destination_node
-    end
-
-    def to_s
-      s=  "PNode pop #{self.population} freq:#{@word_frequency}"
-      @edge_list.each do |edge|
-        s << " '#{edge.label}'"
-      end
-      s
-    end
-
-    def summary(snodes,prefix)
-      puts "\ngetting summary for node, prefix='#{prefix}'"
-
-      if !(@population_or_summary.is_a? Numeric)
-        @population_or_summary.each do |snode|
-          snodes << SNode.new(prefix + snode.word,snode.word_frequency)
-          puts "  stored modified snode: #{snodes.last}"
-        end
-      else
-        if @word_frequency != 0
-          puts "   ...storing base case (end of word reached)"
-          snodes << SNode.new(prefix,@word_frequency)
-        end
-        @edge_list.each do |child_edge|
-          puts "   ...calling recursively for child edge, prefix '#{prefix}', label '#{child_edge.label}'"
-          child_edge.destination_node.summary(snodes,prefix+child_edge.label)
-        end
-      end
-    end
-
-    def store_summary(summary)
-      @population_or_summary = summary
-    end
-
-  end
-
-  class PEdge
-    attr_accessor :destination_node
-    attr_accessor :label
-  end
 
   def build_prediction_tree(word_frequency_map)
-    @max_result_items = 3
+    PNode.reset_node_ids
 
-    root_node = PNode.new
+    @max_result_items = 5
+
+    @root_node = PNode.new
     word_frequency_map.each_pair do |word,frequency|
-      insert_word_into_tree(root_node,word,frequency)
+      insert_word_into_tree(@root_node,word+'$',frequency)
     end
 
-    compress_tree(root_node)
+    apply_edge_filters(@root_node,0)
 
-    build_summary_trees(root_node)
+    # compress_tree(root_node)
 
-    root_node
+    # build_summary_trees(root_node)
+
   end
 
 
@@ -232,42 +168,40 @@ class PredictionTree
     end
   end
 
-  def build_summary_trees(node,prefix='')
-    # Recursively build child node summaries first
-    node.edge_list.each{|child_edge| build_summary_trees(child_edge.destination_node,prefix+child_edge.label)}
+  def apply_edge_filters(node,node_depth)
+    leaf_nodes = []
+    # Is this a leaf node?
+    if node.word_frequency != 0
+      leaf_nodes << node
+    else
+      node.edge_list.each do |child_edge|
+        child_node = child_edge.destination_node
+        leaf_nodes.concat(apply_edge_filters(child_node,node_depth+1))
+      end
 
-    return if node.population <= @max_result_items
-
-    # Gather summary items from children
-    child_summaries = []
-    node.edge_list.each do |child_edge|
-      child_node = child_edge.destination_node
-      child_summary = []
-      child_node.summary(child_summary,prefix+child_edge.label)
-      child_summaries << child_summary
-    end
-    summary = build_summary_from_child_summaries(child_summaries)
-    node.store_summary(summary)
-    puts "\nstored summary for node:\n#{Pretty.print(summary)}\n"
-
-  end
-
-  def build_summary_from_child_summaries(child_summaries)
-    puts "building summary from #{child_summaries.size} child summaries"
-    summary = []
-    child_summaries.each do |child_summary|
-      puts " proc next child"
-      child_summary.each do |snode|
-        insert_pos = summary.bsearch_index{|snode2| snode2.word > snode.word}
-        puts "  insert pos = #{insert_pos} for #{snode}"
-        if insert_pos < @max_result_items
-          summary.insert(insert_pos,snode)
-          summary.pop if summary.size > @max_result_items
-        end
+      # Sort leaf nodes by highest frequency first
+      leaf_nodes.sort!{|a,b| b.word_frequency <=> a.word_frequency}
+      while leaf_nodes.length > @max_result_items
+        filter_word(leaf_nodes.pop,node_depth+1)
       end
     end
-    puts " returning summary #{Pretty.print(summary)}\n"
-    summary
+    # puts "apply edge filters for #{node}, leaf nodes:\n #{Pretty.print(leaf_nodes)}"
+    leaf_nodes
+  end
+
+  def filter_word(leaf_node,filter_depth)
+    node = leaf_node
+    while true
+      edge = node.parent_edge
+      break if !edge
+      parent = edge.source_node
+      break if edge.filter_value >= filter_depth
+      # puts "  changing edge #{edge} filter from #{edge.filter_value} to #{filter_depth}"
+      edge.filter_value = filter_depth
+      node = parent
+      # Propagate the lowest of the child edge filter values
+      filter_depth = node.edge_list.inject(filter_depth){|f,e| f = [f,e.filter_value].min}
+    end
   end
 
 end

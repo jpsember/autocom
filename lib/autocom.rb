@@ -48,21 +48,18 @@ EOS
     puts msg
 
     corpus_text = FileUtils.read_text_file(corpus_path)
+    corpus_text = apply_frequency_filter(corpus_text)
 
 
-    if true
-      corpus = Corpus.new(corpus_text)
-      ac = PredictionTree.new(corpus)
-      puts ac
-      return
-    end
+    corpus = Corpus.new(corpus_text)
+    ac = PredictionTree.new(corpus)
+    puts ac
 
-    ac = AutoComplete.new(corpus_text,8,options[:unigram],options[:bigram])
+    # ac = AutoComplete.new(corpus_text,8,options[:unigram],options[:bigram])
 
     quit_flag = false
 
     text = ''
-
 
     while !quit_flag
       puts
@@ -97,5 +94,24 @@ EOS
       end
     end
   end
+
+  def apply_frequency_filter(txt)
+    ends_with_freq = Regexp.new(".*\\.(\\d+)$")
+    txt2 = ''
+    txt.lines.each do |line|
+      line.chomp!
+      match = ends_with_freq.match(line)
+      if match
+        rep = match[1].to_i
+        skip_digits = match[1].length + 1
+        line = line[0...-skip_digits]
+        line += ' '
+        line *= rep
+      end
+      txt2 << line << "\n"
+    end
+    txt2
+  end
+
 end
 
