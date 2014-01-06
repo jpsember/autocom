@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'js_base'
   s.add_runtime_dependency 'tokn'
 
-  s.homepage = 'http://www.cs.ubc.ca/~jpsember'
+  s.homepage    = 'http://www.cs.ubc.ca/~jpsember'
   s.test_files  = Dir.glob('test/*.rb')
   s.license     = 'MIT'
 end

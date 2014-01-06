@@ -46,7 +46,7 @@ EOS
 
     if options[:window]
       corpus = Corpus.new(corpus_text)
-      ac = PredictionTree.new(corpus,options[:window])
+      ac = PredictionTree.build_from_corpus(corpus,options[:window])
       puts "Prediction Tree:\n-------------------------------------\n#{ac}" if options[:verbose]
     else
       ac = AutoComplete.new(corpus_text,8,options[:unigram],options[:bigram])

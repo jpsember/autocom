@@ -1,18 +1,27 @@
-#!/usr/bin/env ruby
-
-require 'js_base/Pretty'
-req 'pnode pedge'
+req 'pnode pedge prediction_tree_serialization'
 
 class PredictionTree
 
   attr_reader :max_result_items
 
-  def initialize(corpus,window_size=5)
-    @window_size = window_size
-    word_freq_map = build_word_frequency_map(corpus)
-    build_prediction_tree(word_freq_map)
+  def self.build_from_corpus(corpus,window_size=5)
+    tree = PredictionTree.new(nil)
+    tree.build_from_corpus_aux(corpus,window_size)
+    tree
   end
 
+  def self.read_from_json(json_string)
+    root_node = PredictionTreeSerialization.read_from_json(json_string)
+    self.new(root_node)
+  end
+
+  def to_json
+    PredictionTreeSerialization.to_json(@root_node)
+  end
+
+  def initialize(root_node)
+    @root_node = root_node
+  end
 
   def match(text)
 
@@ -50,6 +59,12 @@ class PredictionTree
     s = ''
     to_s_aux(@root_node,s,0,'')
     s
+  end
+
+  def build_from_corpus_aux(corpus,window_size=5)
+    @window_size = window_size
+    word_freq_map = build_word_frequency_map(corpus)
+    build_prediction_tree(word_freq_map)
   end
 
 
@@ -101,44 +116,43 @@ class PredictionTree
       end
 
       # Find the (at most one) edge whose label is a prefix for the unmatched stub portion
-      active_edge = nil
-      active_prefix_size = nil
+      found_edge = nil
+      found_prefix_size = nil
       node.edge_list.each do |edge|
         label = edge.label
         label_prefix_size = [unmatched_stub.length,label.length].min
         label_prefix = label[0...label_prefix_size]
         if unmatched_stub.start_with?(label_prefix)
-          active_edge = edge
-          active_prefix_size = label_prefix_size
+          found_edge = edge
+          found_prefix_size = label_prefix_size
           break
         end
       end
-      break if !active_edge
+      break if !found_edge
 
-      depth += active_prefix_size
-      if active_prefix_size < active_edge.label.length
-        ret = NodeCursor.new(node,depth,active_prefix_size)
+      depth += found_prefix_size
+      if found_prefix_size < found_edge.label.length
+        ret = NodeCursor.new(node,depth,found_prefix_size)
         break
       end
-      node = active_edge.destination_node
+      node = found_edge.destination_node
     end
     ret
   end
 
   def to_s_aux(node,s,indent,accum)
-    s << ' '*indent << "#{node.unique_id}: "
+    s << ' '*indent
     if node.is_leaf?
       s << "'#{accum[0...-1]}' *#{node.word_frequency}"
     end
     s << "\n"
     node.edge_list.each do |edge|
-      s << ' '*(2+indent) << edge.to_s(false) << "\n"
+      s << ' '*(2+indent) << edge.to_s << "\n"
       to_s_aux(edge.destination_node,s,indent+4,accum+edge.label)
     end
   end
 
   def build_prediction_tree(word_frequency_map)
-    PNode.reset_node_ids
     @root_node = PNode.new
     word_frequency_map.each_pair do |word,frequency|
       insert_word_into_tree(@root_node,word+'$',frequency)
@@ -149,7 +163,6 @@ class PredictionTree
 
 
   def insert_word_into_tree(node,word,word_frequency,cursor = 0)
-    node.adjust_population(1)
     if cursor == word.length
       node.word_frequency = word_frequency
     else
@@ -192,25 +205,6 @@ class PredictionTree
     end
   end
 
-  def compress_tree
-    compress_tree_aux(@root_node)
-  end
-
-  def compress_tree_aux(node)
-    node.edge_list.each do |edge_a|
-      while true
-        node_b = edge_a.destination_node
-        break if node_b.edge_list.size != 1
-        edge_b = node_b.edge_list[0]
-        node_c = edge_b.destination_node
-        edge_a.label = edge_a.label + edge_b.label
-        edge_a.destination_node = node_c
-        node_c.parent_edge = edge_a
-      end
-      compress_tree_aux(node_b)
-    end
-  end
-
   def install_edge_filters
     install_edge_filters_aux(@root_node,0)
   end
@@ -243,6 +237,25 @@ class PredictionTree
       # Propagate the lowest of the sibling edges' filter values upward
       filter_depth = parent_node.edge_list.inject(filter_depth){|f,e| f = [f,e.filter_value].min}
       edge = parent_node.parent_edge
+    end
+  end
+
+  def compress_tree
+    compress_tree_aux(@root_node)
+  end
+
+  def compress_tree_aux(node)
+    node.edge_list.each do |edge_a|
+      while true
+        node_b = edge_a.destination_node
+        break if node_b.edge_list.size != 1
+        edge_b = node_b.edge_list[0]
+        node_c = edge_b.destination_node
+        edge_a.label = edge_a.label + edge_b.label
+        edge_a.destination_node = node_c
+        node_c.parent_edge = edge_a
+      end
+      compress_tree_aux(node_b)
     end
   end
 

@@ -1,0 +1,23 @@
+
+  --and$-->
+    'and' *9
+  --ba-->
+    
+      --r$-->
+        'bar' *7
+      --t-->
+        
+          --$-->
+            'bat' *5
+          --h--> f1
+            
+              --$--> f1
+                'bath' *4
+              --e$--> f3
+                'bathe' *2
+          --s$--> f4
+            'bats' *2
+
+and [bar]
+and [bat]
+and [bath]

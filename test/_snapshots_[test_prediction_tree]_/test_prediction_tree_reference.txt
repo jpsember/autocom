@@ -1,36 +1,18 @@
 
-ba
-[bar]
-[bat]
-[bath]
-
-bath
-[bath]
-[bathe]
-
 a
 [and]
 
-z
-
-anz
-
-bae
-
-bath ba
-bath [bar]
-bath [bat]
-bath [bath]
-
-3
-
 ba
 [bar]
 [bat]
 [bath]
 
-an
-[and]
+abba
+
+and ba
+and [bar]
+and [bat]
+and [bath]
 
 2
 
@@ -40,7 +22,7 @@ ba
 
 10
 
-ba
+b
 [bar]
 [bat]
 [bath]
@@ -49,7 +31,5 @@ ba
 
 a
 [and]
-
-z
 
 
