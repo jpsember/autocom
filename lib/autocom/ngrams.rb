@@ -29,7 +29,7 @@ class Ngrams
 
       min_freq = calc_min_freq(min_log_prob)
 
-      cursor = @ngram_array.bsearch_index{|ngram,freq| ngram >= prefix}
+      cursor = @ngram_array.binary_search{|ngram,freq| ngram >= prefix}
 
       while cursor < @ngram_array.size
         ngram,freq = @ngram_array[cursor]
@@ -44,7 +44,7 @@ class Ngrams
         match.info = info
 
         # Insert into position based on frequency
-        insert_posn = matches.bsearch_index{|ng,fr| freq >= fr}
+        insert_posn = matches.binary_search{|ng,fr| freq >= fr}
         matches[insert_posn,0] = [[match,freq]]
         matches.pop if matches.size > max_results
       end

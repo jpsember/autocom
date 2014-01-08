@@ -1,0 +1,31 @@
+
+  --aa-->
+    
+      --aaabbb-->
+        
+          --bb$-->
+            'aaaaabbbbb' *5
+          --cc$-->
+            'aaaaabbbcc' *5
+      --zz$-->
+        'aazz' *5
+
+Matches for line 'a':
+[aaaaabbbbb]
+[aaaaabbbcc]
+[aazz]
+
+
+Matches for line 'aa':
+[aaaaabbbbb]
+[aaaaabbbcc]
+[aazz]
+
+
+Matches for line 'aaa':
+[aaaaabbbbb]
+[aaaaabbbcc]
+
+
+Matches for line 'aaax':
+

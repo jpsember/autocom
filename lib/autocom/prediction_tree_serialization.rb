@@ -7,7 +7,7 @@ class PredictionTreeSerialization
 
   class VersionError < Exception; end
 
-  VERSION = 201
+  VERSION = 202
 
   def self.read_from_json(json_string)
     map = JSON.parse(json_string)
@@ -28,45 +28,40 @@ class PredictionTreeSerialization
 
 
   def self.build_node(node)
-    node_info = []
-    node_info << node.word_frequency
-    edge_list = []
+    node_info = nil
+    if node.is_leaf?
+      node_info = node.word_frequency
+    else
+      edge_list = []
+      node.edge_list.each do |edge|
+        edge_info = []
 
-    node.edge_list.each do |edge|
-      edge_info = []
+        edge_info << self.build_node(edge.destination_node)
+        edge_info << edge.label
+        edge_info << edge.filter_value
 
-      edge_info << self.build_node(edge.destination_node)
-      edge_info << edge.label
-      edge_info << edge.filter_value
-
-      edge_list << edge_info
+        edge_list << edge_info
+      end
+      node_info = edge_list
     end
-    node_info << edge_list
-
     node_info
   end
 
   def self.read_node(node_info)
-    # puts "reading node from node_info: #{node_info}"
-
-    frequency,edge_list = node_info
-    # puts " freq=#{frequency}"
-    # puts " edge_list=#{edge_list}"
-
     node = PNode.new
-    node.word_frequency = frequency
-    edges = []
-    edge_list.each do |edge_info|
-      edge = PEdge.new
-      # puts "   ...reading destination node from #{edge_info[0]}"
-      edge.destination_node = self.read_node(edge_info[0])
-      edge.label = edge_info[1]
-      edge.filter_value = edge_info[2]
-      # puts "   label=#{edge.label}"
-      # puts "   filter=#{edge.filter_value}"
-      edges << edge
+    if node_info.is_a? Numeric
+      node.word_frequency = node_info
+    else
+      edges = []
+      node_info.each do |edge_info|
+        edge = PEdge.new
+        edge.destination_node = self.read_node(edge_info[0])
+        edge.label = edge_info[1]
+        edge.filter_value = edge_info[2]
+        edges << edge
+      end
+      node.edge_list = edges
     end
-    node.edge_list = edges
     node
   end
 

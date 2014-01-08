@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'js_base/test'
-require 'autocom'
+require 'autocom/app'
 
 class TestPredictionTree <  Test::Unit::TestCase
 
@@ -9,51 +9,25 @@ class TestPredictionTree <  Test::Unit::TestCase
     File.join(File.dirname(__FILE__),name)
   end
 
-  def read_corpus(path='small_corpus')
-    text = FileUtils.read_text_file(file_path("#{path}.txt"))
-    text = Corpus.process_frequency_tags(text)
-    Corpus.new(text)
-  end
+  def show_match(tree,line,show_line=false)
+    if show_line
+      puts "Matches for line '#{line}':"
+    end
 
-  def show_match(tree,line)
     matches = tree.match(line)
     matches.each do |match|
       puts match
     end
+    puts if show_line
   end
 
-  def test_prediction_tree
-    IORecorder.new.perform do
-      corpus = read_corpus
-      tree = PredictionTree.build_from_corpus(corpus,3)
-      while true
-        puts
-        line = $stdin.gets.chomp
-        break if line == ''
-        window = line.to_i
-        if window > 0
-          tree = PredictionTree.build_from_corpus(corpus,window)
-          next
-        end
-        show_match(tree,line)
-      end
-    end
-  end
-
-  def test_dump_tree
-    IORecorder.new.perform do
-      corpus = read_corpus
-      (2..6).each do |window|
-        tree = PredictionTree.build_from_corpus(corpus,window)
-        puts "Tree for window size #{window}:\n----------------------------\n#{tree}\n"
-      end
-    end
+  def build_from_json(name)
+    PredictionTree.read_from_json(FileUtils.read_text_file(file_path("json_tree_#{name}.txt")))
   end
 
   def test_to_json
     IORecorder.new.perform do
-      corpus = read_corpus('tiny_corpus')
-      tree = PredictionTree.build_from_corpus(corpus,3)
+      tree = build_from_json('2')
       json = tree.to_json
       puts json
     end
@@ -61,23 +35,21 @@ class TestPredictionTree <  Test::Unit::TestCase
 
   def test_to_json_large
     IORecorder.new.perform do
-      corpus = read_corpus('large_corpus')
-      tree = PredictionTree.build_from_corpus(corpus)
-      puts tree.to_json
+      tree = build_from_json('large')
+      json = tree.to_json
+      puts json
     end
   end
 
   def test_from_json_large
     IORecorder.new.perform do
-      text = FileUtils.read_text_file(file_path('large_corpus_json.txt'))
-      tree = PredictionTree.read_from_json(text)
+      tree = build_from_json('large')
       show_match(tree,'res')
     end
   end
 
   def test_from_json_1
-    text = FileUtils.read_text_file(file_path('json_tree_1.txt'))
-    tree = PredictionTree.read_from_json(text)
+    tree = build_from_json('1')
     IORecorder.new.perform do
       puts tree
       puts
@@ -86,12 +58,33 @@ class TestPredictionTree <  Test::Unit::TestCase
   end
 
   def test_from_json_2
-    text = FileUtils.read_text_file(file_path('json_tree_2.txt'))
-    tree = PredictionTree.read_from_json(text)
+    tree = build_from_json('2')
     IORecorder.new.perform do
       puts tree
       puts
       show_match(tree,'and ba')
+    end
+  end
+
+
+  def test_from_json_3
+    tree = build_from_json('3')
+    IORecorder.new.perform do
+      puts tree
+      puts
+      show_match(tree,'a',true)
+      puts
+      show_match(tree,'aa',true)
+      puts
+      show_match(tree,'aaa',true)
+      puts
+      show_match(tree,'aaax',true)
+    end
+  end
+
+  def test_binary
+    IORecorder.new.perform do
+      AutoComApp.new.run("-c #{file_path('sample_corpus.txt')} -w 3".split(' '))
     end
   end
 

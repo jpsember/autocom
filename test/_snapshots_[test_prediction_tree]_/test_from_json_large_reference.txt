@@ -3,3 +3,8 @@
 [respond]
 [resources]
 [research]
+[respect]
+[responses]
+[result]
+[resolution]
+[resume]

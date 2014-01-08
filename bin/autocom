@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'autocom'
+require 'autocom/app'
 
 AutoComApp.new.run

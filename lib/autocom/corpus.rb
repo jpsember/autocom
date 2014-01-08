@@ -30,9 +30,23 @@ class Corpus
     txt2
   end
 
+  def word_frequency_map
+    word_freq_map = {}
+    @sentences.each{|sentence| add_sentence_to_frequency_map(sentence,word_freq_map)}
+    word_freq_map
+  end
 
   private
 
+  def add_sentence_to_frequency_map(sentence,word_freq_map)
+    sentence.each do |word|
+      if !word_freq_map.has_key?(word)
+        word_freq_map[word] = 1
+      else
+        word_freq_map[word] += 1
+      end
+    end
+  end
 
   def read_corpus(content_string)
 

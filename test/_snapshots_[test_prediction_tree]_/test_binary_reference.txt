@@ -1,0 +1,60 @@
+
+Performs autocompletion based on a corpus.
+
+Type a sentence; you can also use these special keys:
+
+  tab    : uses first suggestion
+  delete : delete last character
+  q      : quit
+
+
+ ==> |
+a
+[and]
+[a]
+[about]
+ ==> a|
+n
+[and]
+[another]
+[any]
+ ==> an|
+	
+ ==> and |
+b
+and [bum]
+and [by]
+and [below]
+ ==> and b|
+e
+and [below]
+and [bed]
+and [because]
+ ==> and be|
+
+and [bum]
+and [by]
+and [below]
+ ==> and b|
+
+ ==> and |
+a
+and [and]
+and [a]
+and [about]
+ ==> and a|
+t
+ ==> and at|
+ 
+ ==> and at |
+b
+and at [bum]
+and at [by]
+and at [below]
+ ==> and at b|
+e
+and at [below]
+and at [bed]
+and at [because]
+ ==> and at be|
+q
