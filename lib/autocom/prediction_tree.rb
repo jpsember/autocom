@@ -51,23 +51,27 @@ class PredictionTree
 
   def match_aux(node,cursor,text_accum)
     if node.is_leaf?
-      # Omit the $ we added along the last edge
-      match = Match.new(@match_text,@match_stub,text_accum[0...-1])
+      match = Match.new(@match_text,@match_stub,text_accum[0..-2]) # omit the $ suffix
       @matches << [match,node.word_frequency]
     else
       node.edge_list.each do |edge|
         next if edge.filter_value > @match_stub.length
-        # If the cursor is nonzero, the edge labels include prefixes that we must match to the stub
-        if cursor > 0
-          label_prefix = edge.label[0..cursor-1]
-          next if label_prefix != text_accum[-cursor..-1]
-          text_to_add = edge.label[cursor..-1]
-        else
-          text_to_add = edge.label
-        end
-        match_aux(edge.destination_node,0,text_accum + text_to_add)
+        # Make sure any characters to the left of the cursor match the accumulated text's suffix
+        next if (cursor != 0 && edge.label[0..cursor-1] != text_accum[-cursor..-1])
+        # Add characters to right of cursor to the accumulated text, and recurse with child node
+        match_aux(edge.destination_node,0,text_accum + edge.label[cursor..-1])
       end
     end
+  end
+
+  # Compare two strings to see how their prefixes compare, where the
+  # prefix length is the length of the smaller of the two strings
+  #
+  # Returns the result of prefix from a <=> prefix from b
+  def self.compare_prefixes(string_a, string_b)
+    prefix_length = [string_a.length, string_b.length].min
+    result = (string_a[0...prefix_length] <=> string_b[0...prefix_length])
+    [prefix_length,result]
   end
 
   # Find the position within the tree corresponding to the autocompletion stub
@@ -89,27 +93,24 @@ class PredictionTree
       end
 
       # Find the (at most one) edge whose label is a prefix for the unmatched stub portion
-      found_edge = nil
-      found_prefix_size = nil
-      node.edge_list.each do |edge|
-        label = edge.label
-        label_prefix_size = [unmatched_stub.length,label.length].min
-        label_prefix = label[0...label_prefix_size]
-        if unmatched_stub.start_with?(label_prefix)
-          found_edge = edge
-          found_prefix_size = label_prefix_size
-          break
-        end
+      edge = node.edge_list.bsearch do |e|
+        _,result = self.class.compare_prefixes(e.label,unmatched_stub)
+        result >= 0
       end
 
-      break if !found_edge
+      break if !edge
 
-      depth += found_prefix_size
-      if found_prefix_size < found_edge.label.length
-        ret = [node,found_prefix_size]
+      # Verify that the prefix of the found edge is a match (and not strictly greater)
+      prefix_length,result = self.class.compare_prefixes(edge.label,unmatched_stub)
+      break if result != 0
+
+      if (prefix_length < edge.label.length)
+        ret = [node,prefix_length]
         break
       end
-      node = found_edge.destination_node
+
+      depth += edge.label.length
+      node = edge.destination_node
     end
     ret
   end

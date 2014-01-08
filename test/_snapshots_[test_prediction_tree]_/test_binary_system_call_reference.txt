@@ -1,0 +1,10 @@
+Performs autocompletion using most likely unigrams and bigrams taken from a
+corpus;
+or, returns most likely n (single word) completions using the prediction tree
+algorithm.
+   --corpus, -c <s>:   corpus
+  --unigram, -u <f>:   unigram log probability
+   --bigram, -b <f>:   bigram log probability
+   --window, -w <i>:   window size (for prediction tree algorithm)
+      --verbose, -v:   verbose
+         --help, -h:   Show this message

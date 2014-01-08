@@ -66,7 +66,6 @@ class TestPredictionTree <  Test::Unit::TestCase
     end
   end
 
-
   def test_from_json_3
     tree = build_from_json('3')
     IORecorder.new.perform do
@@ -85,6 +84,14 @@ class TestPredictionTree <  Test::Unit::TestCase
   def test_binary
     IORecorder.new.perform do
       AutoComApp.new.run("-c #{file_path('sample_corpus.txt')} -w 3".split(' '))
+    end
+  end
+
+  def test_binary_system_call
+    # We can't do any system calls that require user input, since we're not connected to a terminal.
+    IORecorder.new.perform do
+      output,_ = scall('autocom -h')
+      puts output
     end
   end
 
