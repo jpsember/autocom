@@ -68,7 +68,7 @@ EOS
       when 9.chr
         if !matches.empty?
           match = matches[0]
-          text[-match.prefix.length..-1] = match.text + ' '
+          text[-match.stub.length..-1] = match.completion + ' '
         end
       else
         text << cmd

@@ -14,6 +14,9 @@ class PredictionTree
     PredictionTreeSerialization.to_json(@root_node)
   end
 
+  # Suggest autocompletions for a word stub at the end of some text.
+  # Returns an array of zero or more Match objects
+  #
   def match(text)
 
     # Set up some temporary instance variables to use during this operation
