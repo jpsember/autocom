@@ -5,7 +5,10 @@ Gem::Specification.new do |s|
   s.version     = '0.0.0'
   s.date        = '2013-12-04'
   s.summary     = "Autocompletion"
-  s.description = "More to come"
+  s.description =<<-EOS
+Introducing a Prediction Tree, a data structure that efficiently suggests the most
+probable n completions for a word.
+EOS
   s.authors     = ["Jeff Sember"]
   s.email       = 'jpsember@gmail.com'
   s.files = FileList['lib/**/*.rb',

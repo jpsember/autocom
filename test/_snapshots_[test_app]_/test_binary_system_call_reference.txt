@@ -1,6 +1,6 @@
 Uses a prediction tree algorithm to suggest the most likely n autocompletions
 for a word.
-  --corpus, -c <s>:   corpus
+  --corpus, -c <s>:   corpus xxx[.txt|.predtree]
   --window, -w <i>:   window size (for prediction tree algorithm) (default: 5)
      --verbose, -v:   verbose
         --help, -h:   Show this message

@@ -1,0 +1,22 @@
+
+Building tree from text file, extension provided
+
+Performs autocompletion based on a corpus.
+
+Type a sentence; you can also use these special keys:
+
+  tab    : uses first suggestion
+  delete : delete last character
+  q      : quit
+
+
+ ==> |
+a
+[and]
+ ==> a|
+n
+[and]
+ ==> an|
+	
+ ==> and |
+q

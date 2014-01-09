@@ -1,0 +1,26 @@
+
+Reading tree from json, no extension provided
+
+Performs autocompletion based on a corpus.
+
+Type a sentence; you can also use these special keys:
+
+  tab    : uses first suggestion
+  delete : delete last character
+  q      : quit
+
+
+ ==> |
+b
+[be]
+[but]
+[been]
+[because]
+[by]
+[back]
+[brown]
+[being]
+[before]
+[both]
+ ==> b|
+q

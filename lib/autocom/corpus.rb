@@ -15,9 +15,15 @@ class Corpus
   def self.process_frequency_tags(text)
     ends_with_freq = Regexp.new(".*\\.(\\d+)$")
     txt2 = ''
+    frequency_token_found = false
     text.lines.each do |line|
       line.chomp!
       match = ends_with_freq.match(line)
+      if !frequency_token_found
+        return text if !match
+        frequency_token_found = true
+      end
+
       if match
         rep = match[1].to_i
         skip_digits = match[1].length + 1

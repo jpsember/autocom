@@ -1,0 +1,19 @@
+
+Performs autocompletion based on a corpus.
+
+Type a sentence; you can also use these special keys:
+
+  tab    : uses first suggestion
+  delete : delete last character
+  q      : quit
+
+
+ ==> |
+b
+[bum]
+[by]
+[below]
+[but]
+[because]
+ ==> b|
+q

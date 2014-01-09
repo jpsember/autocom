@@ -9,14 +9,10 @@ class AutoComApp
 
     p = Trollop::Parser.new do
             banner <<-EOS
-Performs autocompletion using most likely unigrams and bigrams taken from a corpus;
-or, returns most likely n (single word) completions using the prediction tree algorithm.
-
+Uses a prediction tree algorithm to suggest the most likely n autocompletions for a word.
 EOS
-      opt :corpus,"corpus",:type => :string
-      opt :unigram,"unigram log probability",:type => :float
-      opt :bigram,"bigram log probability",:type => :float
-      opt :window,"window size (for prediction tree algorithm)",:type => :integer
+      opt :corpus,"corpus xxx[.txt|.predtree]",:type => :string
+      opt :window,"window size (for prediction tree algorithm)",:type => :integer,:default => 5
       opt :verbose,"verbose"
     end
 
@@ -40,17 +36,9 @@ Type a sentence; you can also use these special keys:
 EOS
     puts msg
 
-    corpus_text = FileUtils.read_text_file(corpus_path)
-    corpus_text = Corpus.process_frequency_tags(corpus_text)
+    ac = get_prediction_tree(corpus_path)
 
-    if options[:window]
-      corpus = Corpus.new(corpus_text)
-      map = corpus.word_frequency_map
-      ac = PredictionTreeBuilder.build_from_word_frequency_map(map,options[:window])
-      puts "Prediction Tree:\n-------------------------------------\n#{ac}" if options[:verbose]
-    else
-      ac = AutoComplete.new(corpus_text,8,options[:unigram],options[:bigram])
-    end
+    puts "Prediction Tree:\n-------------------------------------\n#{ac}" if options[:verbose]
 
     quit_flag = false
 
@@ -86,6 +74,42 @@ EOS
         text << cmd
       end
     end
+  end
+
+
+  def get_word_map_from_file(corpus_path)
+  end
+
+  def build_tree(path)
+    corpus_text = FileUtils.read_text_file(FileUtils.change_extension(path,'.txt'))
+    corpus_text = Corpus.process_frequency_tags(corpus_text)
+    corpus = Corpus.new(corpus_text)
+    tree = PredictionTreeBuilder.build_from_word_frequency_map(corpus.word_frequency_map)
+    tree_path = FileUtils.change_extension(path,'.predtree')
+    FileUtils.write_text_file(tree_path,tree.to_json)
+    tree
+  end
+
+  def read_tree(path)
+    PredictionTree.read_from_json(FileUtils.read_text_file(FileUtils.change_extension(path,'.predtree')))
+  end
+
+  def get_prediction_tree(corpus_path)
+    ext = File.extname(corpus_path)
+    if ext == ''
+      if File.file?(corpus_path+'.predtree')
+        ext = '.predtree'
+      elsif File.file?(corpus_path+'.txt')
+        ext = '.txt'
+      end
+    end
+
+    if ext == '.predtree'
+      return read_tree(corpus_path)
+    elsif ext == '.txt'
+      return build_tree(corpus_path)
+    end
+    die "Not a recognized file: #{corpus_path}"
   end
 
 end

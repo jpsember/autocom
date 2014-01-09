@@ -1,0 +1,12 @@
+
+Failing for no tree found
+
+Performs autocompletion based on a corpus.
+
+Type a sentence; you can also use these special keys:
+
+  tab    : uses first suggestion
+  delete : delete last character
+  q      : quit
+
+Not a recognized file: no_such_tree
