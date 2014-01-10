@@ -59,7 +59,7 @@ class Corpus
     sentences = []
     word_buffer = []
     tokenizer = Tokn::Tokenizer.new(Corpus.dfa,content_string,'WS')
-    while tokenizer.hasNext
+    while tokenizer.has_next
       tok = tokenizer.read
 
       if tok.id == 2 # WORD
